@@ -57,6 +57,34 @@
       </div>
     </div>
 
+    <div id="admin-view" style="display:none;" class="mt-5 pt-3 border-top">
+        <h5 class="text-secondary">🔧 房東管理區</h5>
+        <div class="card bg-light">
+          <div class="card-body">
+            <h6>快速抄表開單</h6>
+            <form onsubmit="submitBill(event)">
+              <div class="row g-2">
+                <div class="col-4">
+                  <input type="text" class="form-control" id="bill-room" placeholder="房號(201)" required>
+                </div>
+                <div class="col-8">
+                   <input type="month" class="form-control" id="bill-period" required>
+                </div>
+                <div class="col-6">
+                  <input type="number" class="form-control" id="bill-elec" placeholder="本月電度" required>
+                </div>
+                <div class="col-6">
+                  <input type="number" class="form-control" id="bill-water" placeholder="本月水度" required>
+                </div>
+                <div class="col-12 mt-2">
+                  <button type="submit" id="btn-create-bill" class="btn btn-dark w-100">生成帳單</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
     <script>
       // ⚠️ 設定區：請填入你的資料
       const LIFF_ID = '2008820485-VKMYnG7d'; 
@@ -139,32 +167,102 @@
       }
 
       // 渲染畫面 (跟之前一樣)
+// 渲染畫面主函式
       function renderData(response) {
+        // 1. 隱藏讀取動畫，顯示內容區
         document.getElementById('loading').style.display = 'none';
         document.getElementById('content').style.display = 'block';
 
+        // 2. 判斷是否已綁定
         if (!response.registered) {
+          // --- 情況 A: 未綁定 ---
+          // 顯示綁定表單，隱藏儀表板
           document.getElementById('unregistered-view').style.display = 'block';
+          document.getElementById('dashboard-view').style.display = 'none';
         } else {
+          // --- 情況 B: 已綁定 (正常租客) ---
+          document.getElementById('unregistered-view').style.display = 'none';
           document.getElementById('dashboard-view').style.display = 'block';
-          document.getElementById('welcome-msg').innerText = `嗨，${response.tenant.name} (${response.tenant.room_id}房)`;
+          
+          // 2.1 填入租客基本資料
+          // response.tenant 是後端回傳的物件
+          const tenantName = response.tenant.name || "租客";
+          const roomName = response.tenant.room_id || "未知房號";
+          document.getElementById('welcome-msg').innerText = `嗨，${tenantName} (${roomName}房)`;
           document.getElementById('total-due').innerText = response.total_due;
 
+          // 2.2 渲染帳單列表
           const billList = document.getElementById('bill-list');
-          billList.innerHTML = "";
+          billList.innerHTML = ""; // 先清空舊資料
+
           if (response.bills.length === 0) {
-             billList.innerHTML = '<p class="text-muted">無待繳帳單。</p>';
+             // 無帳單時的顯示
+             billList.innerHTML = `
+               <div class="text-center py-4">
+                 <p class="text-muted mb-0">🎉 太棒了，目前沒有待繳帳單！</p>
+               </div>`;
+             document.getElementById('bill-status-text').innerText = "目前繳費狀況良好";
+             // 如果沒有欠款，總金額顯示綠色或預設色
+             document.getElementById('total-due').classList.remove('text-danger');
           } else {
+             // 有帳單時的顯示
              document.getElementById('bill-status-text').innerText = "您有未結清的帳單";
+             document.getElementById('total-due').classList.add('text-danger'); // 金額變紅色
+
              response.bills.forEach(bill => {
-               billList.innerHTML += `
-                 <div class="card"><div class="card-body d-flex justify-content-between">
-                   <div><h6>${bill.period}</h6><small>${bill.status}</small></div>
-                   <h5 class="text-danger">$${bill.total_amt}</h5>
-                 </div></div>`;
+               // 判斷狀態顯示文字與顏色
+               const isUnpaid = bill.status === 'UNPAID';
+               const statusText = isUnpaid ? '未繳費' : '審核中';
+               const statusBadgeClass = isUnpaid ? 'bg-danger' : 'bg-warning text-dark';
+               
+               // 產生每張帳單的 HTML 卡片
+               const item = document.createElement('div');
+               item.className = 'card border-0 shadow-sm mb-3'; // 加一點陰影與邊距
+               item.innerHTML = `
+                 <div class="card-body d-flex justify-content-between align-items-center">
+                   <div>
+                     <h6 class="mb-1 fw-bold">${bill.period} 帳單</h6>
+                     <span class="badge ${statusBadgeClass}">${statusText}</span>
+                   </div>
+                   <div class="text-end">
+                     <h5 class="mb-1 text-danger fw-bold">$${bill.total_amt}</h5>
+                     ${isUnpaid ? `<button class="btn btn-sm btn-outline-primary mt-1" onclick="uploadProof('${bill.bill_id}')">上傳證明</button>` : ''}
+                   </div>
+                 </div>
+               `;
+               billList.appendChild(item);
              });
           }
+
+          // 3. 處理房東管理區 (Admin View)
+          // 邏輯：如果你希望讓特定的人看到後台，可以比對 ID
+          // 目前為了讓你方便測試，我們直接設定「只要綁定成功就顯示」
+          // 或者你可以把 const isAdmin = true 改成 false 來隱藏
+          
+          const currentUserId = liff.getDecodedIDToken().sub;
+          
+          // TODO: 未來建議後端 API 直接回傳 isAdmin: true/false 比較安全
+          // 這裡我們先做一個簡單的「前端測試開關」
+          const isAdmin = true; // ★ 想隱藏後台就把這裡改成 false
+
+          if (isAdmin) {
+             const adminView = document.getElementById('admin-view');
+             if(adminView) {
+               adminView.style.display = 'block';
+               
+               // 自動填入「本月」到輸入框，方便操作
+               const now = new Date();
+               // 格式化成 YYYY-MM
+               const monthStr = now.toISOString().slice(0, 7); 
+               document.getElementById('bill-period').value = monthStr;
+             }
+          }
         }
+      }
+
+      // [額外補充] 這是上傳證明的預留函式 (避免報錯)
+      function uploadProof(billId) {
+        alert("上傳功能開發中... (Bill ID: " + billId + ")");
       }
     </script>
   </body>
