@@ -15,7 +15,8 @@ function hideLoading() {
 function showToast(message, type = 'info', duration = 3000) {
     const container = document.getElementById('toast-container');
     if (!container) {
-        console.error('Toast container not found');
+        console.error('Toast container not found, falling back to alert');
+        alert(message); // 備用方案
         return;
     }
 
@@ -35,6 +36,7 @@ function showToast(message, type = 'info', duration = 3000) {
     `;
 
     container.appendChild(toast);
+    console.log('[Toast] Displayed:', message, 'Type:', type); // 調試用
 
     // 動畫：進入
     setTimeout(() => toast.classList.remove('toast-enter'), 10);
