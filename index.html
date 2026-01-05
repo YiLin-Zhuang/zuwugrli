@@ -10,6 +10,8 @@
         body { background-color: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
         .bill-card { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-top: 20px; }
         .bill-header { padding: 20px; text-align: center; color: white; }
+        
+        /* 狀態顏色定義 */
         .header-red { background: linear-gradient(135deg, #ff6b6b, #ee5253); } /* 待繳費 */
         .header-yellow { background: linear-gradient(135deg, #feca57, #ff9f43); color: #333; } /* 待查核 */
         .header-green { background: linear-gradient(135deg, #1dd1a1, #10ac84); } /* 已完成 */
@@ -34,8 +36,11 @@
             <div class="card shadow-sm mt-5">
                 <div class="card-body p-4 text-center">
                     <h4>👋 歡迎來到租屋管理</h4>
-                    <p class="text-muted mb-4">請輸入手機號碼以連結您的租屋資料</p>
-                    <input type="tel" id="input-phone" class="form-control form-control-lg mb-3 text-center" placeholder="0912345678">
+                    <p class="text-muted mb-4">請輸入您的身分證字號以連結資料</p>
+                    
+                    <input type="text" id="input-nid" class="form-control form-control-lg mb-3 text-center" 
+                           placeholder="A123456789" style="text-transform:uppercase;">
+                    
                     <button onclick="doBind()" class="btn btn-primary btn-lg w-100" id="btn-bind">確認綁定</button>
                 </div>
             </div>
@@ -44,8 +49,8 @@
         <div id="view-bill" style="display:none;">
             <div class="bill-card">
                 <div id="bill-header" class="bill-header header-red">
-                    <h3 id="bill-month" class="mb-0">2026/01 帳單</h3>
-                    <span id="bill-status" class="badge bg-white text-dark mt-2">待繳費</span>
+                    <h3 id="bill-month" class="mb-0">-- 帳單</h3>
+                    <span id="bill-status" class="badge bg-white text-dark mt-2">--</span>
                 </div>
 
                 <div class="p-4">
@@ -53,28 +58,28 @@
                         <tbody>
                             <tr>
                                 <th scope="row">🏠 社區房號</th>
-                                <td id="txt-community">幸福A</td>
+                                <td id="txt-community">--</td>
                             </tr>
                             <tr>
                                 <th scope="row">👤 承租人</th>
-                                <td id="txt-name">王小明</td>
+                                <td id="txt-name">--</td>
                             </tr>
                             <tr><td colspan="2"><hr class="my-1"></td></tr>
                             <tr>
                                 <th scope="row">本月房租</th>
-                                <td id="val-rent">$15,000</td>
+                                <td id="val-rent">$0</td>
                             </tr>
                             <tr>
-                                <th scope="row">💧 水費 <small class="text-muted" id="usage-water">(20度)</small></th>
-                                <td id="val-water">$300</td>
+                                <th scope="row">💧 水費 <small class="text-muted" id="usage-water">(--度)</small></th>
+                                <td id="val-water">$0</td>
                             </tr>
                             <tr>
-                                <th scope="row">⚡ 電費 <small class="text-muted" id="usage-elec">(150度)</small></th>
-                                <td id="val-elec">$750</td>
+                                <th scope="row">⚡ 電費 <small class="text-muted" id="usage-elec">(--度)</small></th>
+                                <td id="val-elec">$0</td>
                             </tr>
                             <tr class="total-row">
                                 <th scope="row" class="pt-3">應繳總金額</th>
-                                <td class="pt-3 text-danger" id="val-total">$16,050</td>
+                                <td class="pt-3 text-danger" id="val-total">$0</td>
                             </tr>
                         </tbody>
                     </table>
@@ -93,34 +98,44 @@
                 </div>
             </div>
             
-            <p class="text-center text-muted mt-3 small">資料更新時間: <span id="txt-updated">--</span></p>
+            <p class="text-center text-muted mt-3 small">下拉可重新整理頁面</p>
         </div>
         
         <div id="view-empty" style="display:none;" class="text-center mt-5">
-            <div class="alert alert-light">目前沒有待繳帳單 🎉</div>
+            <div class="alert alert-light">
+                <h5>🎉 目前沒有待繳帳單</h5>
+                <p class="mb-0 text-muted">本月帳單尚未出帳，或是您已繳清。</p>
+            </div>
         </div>
 
     </div>
 
 <script>
-    // ⚠️ 填入你的設定
-    const LIFF_ID = "2008820485-VKMYnG7d";
-    const API_URL = "https://script.google.com/macros/s/AKfycbwRfFmfqVKSHMSHpGaqPFy9x8PLkFSf7cYuoyiFFtKFNA8ojXGtnkRUDWmMsft_MlP_/exec"; 
+    // ⚠️ 設定區：請務必填入你的資料
+    const LIFF_ID = "2008820485-VKMYnG7d"; // 你的 LIFF ID
+    const API_URL = "https://script.google.com/macros/s/AKfycbwRfFmfqVKSHMSHpGaqPFy9x8PLkFSf7cYuoyiFFtKFNA8ojXGtnkRUDWmMsft_MlP_/exec"; // 你的 GAS API URL (exec結尾)
 
+    // 全域變數
     let currentBillId = null;
     let currentUser = null;
+    let currentCommunityId = null; // ★ 新增：用來記住這個租客屬於哪個工作表
 
     window.onload = function() {
+        // 初始化 LIFF
         liff.init({ liffId: LIFF_ID }).then(() => {
             if (!liff.isLoggedIn()) {
+                // 如果是外部瀏覽器，需要這行來處理登入轉址
                 liff.login({ redirectUri: window.location.href });
             } else {
                 currentUser = liff.getDecodedIDToken().sub;
-                fetchStatus();
+                fetchStatus(); // 登入成功後，開始抓資料
             }
+        }).catch(err => {
+            alert("LIFF 初始化失敗: " + err);
         });
     };
 
+    // 取得租客狀態與帳單
     function fetchStatus() {
         fetch(API_URL, {
             method: "POST",
@@ -132,22 +147,32 @@
             document.getElementById("app").style.display = "block";
 
             if (!res.registered) {
+                // 沒綁定 -> 顯示綁定頁
                 document.getElementById("view-bind").style.display = "block";
             } else {
+                // 有綁定 -> 檢查有無帳單
                 if (res.bill) {
                     renderBill(res.tenant, res.bill);
                 } else {
                     document.getElementById("view-empty").style.display = "block";
                 }
             }
+        })
+        .catch(err => {
+            document.getElementById("loading").style.display = "none";
+            alert("連線錯誤：" + err);
         });
     }
 
+    // 渲染帳單畫面
     function renderBill(tenant, bill) {
         document.getElementById("view-bill").style.display = "block";
+        
+        // ★ 關鍵：將後端回傳的 ID 存起來，等一下繳費要用
         currentBillId = bill.bill_id;
+        currentCommunityId = tenant.community_id; 
 
-        // 填入文字
+        // 填入文字資料
         document.getElementById("txt-community").innerText = tenant.community_id;
         document.getElementById("txt-name").innerText = tenant.name;
         document.getElementById("bill-month").innerText = bill.month + " 帳單";
@@ -166,7 +191,7 @@
         const msgReview = document.getElementById("msg-review");
         const msgDone = document.getElementById("msg-done");
 
-        // 重置樣式
+        // 先重置所有樣式
         header.className = "bill-header";
         btnPay.style.display = "none";
         msgReview.style.display = "none";
@@ -175,7 +200,7 @@
         if (bill.status === "待繳費") {
             header.classList.add("header-red");
             statusBadge.innerText = "待繳費";
-            btnPay.style.display = "block"; // 只有這時候可以按
+            btnPay.style.display = "block"; // 只有這時候可以按按鈕
         } else if (bill.status === "待查核") {
             header.classList.add("header-yellow");
             statusBadge.innerText = "審核中";
@@ -187,14 +212,22 @@
         }
     }
 
+    // 執行綁定 (使用身分證)
     function doBind() {
-        const phone = document.getElementById("input-phone").value;
-        if(!phone) return alert("請輸入手機");
+        // 抓取身分證輸入框 (注意 ID 已改為 input-nid)
+        const nid = document.getElementById("input-nid").value;
+        if(!nid) return alert("請輸入身分證字號");
         
         document.getElementById("btn-bind").innerText = "綁定中...";
+        document.getElementById("btn-bind").disabled = true;
+
         fetch(API_URL, {
             method: "POST",
-            body: JSON.stringify({ action: "bind", userId: currentUser, phone: phone })
+            body: JSON.stringify({ 
+                action: "bind", 
+                userId: currentUser, 
+                nationalId: nid // ★ 傳送身分證給後端
+            })
         }).then(r=>r.json()).then(res => {
             if(res.success) {
                 alert("綁定成功！");
@@ -202,10 +235,15 @@
             } else {
                 alert(res.message);
                 document.getElementById("btn-bind").innerText = "確認綁定";
+                document.getElementById("btn-bind").disabled = false;
             }
+        }).catch(err => {
+            alert("錯誤：" + err);
+            document.getElementById("btn-bind").disabled = false;
         });
     }
 
+    // 執行繳費回報
     function doPay() {
         if(!confirm("確定已完成轉帳？")) return;
         
@@ -214,17 +252,27 @@
 
         fetch(API_URL, {
             method: "POST",
-            body: JSON.stringify({ action: "pay", userId: currentUser, billId: currentBillId })
+            body: JSON.stringify({ 
+                action: "pay", 
+                userId: currentUser, 
+                billId: currentBillId,
+                communityId: currentCommunityId // ★ 傳送社區ID，後端才知道去哪張表改狀態
+            })
         }).then(r=>r.json()).then(res => {
             if(res.success) {
                 alert("已通知房東查收！");
                 location.reload(); // 重新整理看狀態變化
             } else {
                 alert("錯誤：" + res.message);
+                document.getElementById("btn-pay").disabled = false;
             }
+        }).catch(err => {
+            alert("錯誤：" + err);
+            document.getElementById("btn-pay").disabled = false;
         });
     }
 
+    // 金額千分位格式化
     function formatMoney(num) {
         return Number(num).toLocaleString();
     }
