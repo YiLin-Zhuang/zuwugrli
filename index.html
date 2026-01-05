@@ -3,129 +3,228 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>租屋管理系統</title>
+    <title>租屋小幫手</title>
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js" data-cfasync="false"></script>
     
     <style>
-        body { background-color: #f4f7f6; font-family: sans-serif; padding-bottom: 80px; }
-        .bill-card { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        body { background-color: #f4f7f6; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding-bottom: 80px; }
+        
+        /* --- Loading 畫面專屬美化 --- */
+        #loading { 
+            position: fixed; 
+            top: 0; left: 0; 
+            width: 100%; height: 100%; 
+            background: linear-gradient(135deg, #ffffff 0%, #f1f4f8 100%); /* 柔和漸層背景 */
+            z-index: 9999; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            flex-direction: column; 
+        }
+        
+        .loading-icon-box {
+            width: 80px; height: 80px;
+            background: white;
+            border-radius: 50%; /* 圓形 */
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 10px 25px rgba(9, 132, 227, 0.15); /* 柔和陰影 */
+            margin-bottom: 20px;
+            animation: float 3s ease-in-out infinite; /* 浮動動畫 */
+        }
+        
+        .loading-text {
+            color: #636e72;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            font-weight: 500;
+            animation: pulse 2s infinite;
+        }
+
+        /* 動畫定義 */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
+        /* --- 其他原本的 CSS --- */
+        .bill-card { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; border: none; }
         .bill-header { padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
         .bill-body { padding: 20px; }
         .bg-red { background: linear-gradient(135deg, #ff7675, #d63031); color: white; }
         .bg-yellow { background: linear-gradient(135deg, #fdcb6e, #e17055); color: white; }
         .bg-green { background: linear-gradient(135deg, #55efc4, #00b894); color: white; }
-        
-        /* Loading 美化 */
-        #loading { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; }
-        .loading-card { background: rgba(255,255,255,0.85); backdrop-filter: blur(10px); padding: 40px; border-radius: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); text-align: center; }
-        .icon-bounce { font-size: 3rem; color: #0984e3; margin-bottom: 20px; animation: bounce 2s infinite; }
-        @keyframes bounce { 0%, 20%, 50%, 80%, 100% {transform: translateY(0);} 40% {transform: translateY(-15px);} 60% {transform: translateY(-7px);} }
-        
-        /* 房東介面專用 */
-        .admin-card { border-left: 5px solid #0984e3; }
-        .admin-header { background: #2d3436; color: white; padding: 20px; border-radius: 0 0 20px 20px; margin-bottom: 20px; }
+        .text-red { color: #d63031; }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-around; padding: 10px 0; z-index: 1000; }
+        .nav-item { text-align: center; color: #b2bec3; font-size: 0.8rem; cursor: pointer; flex: 1; }
+        .nav-item i { font-size: 1.4rem; margin-bottom: 4px; display: block; }
+        .nav-item.active { color: #0984e3; font-weight: bold; }
+        .history-item { background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid #00b894; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
+        .profile-header { background: linear-gradient(135deg, #74b9ff, #0984e3); color: white; padding: 30px 20px; border-radius: 0 0 20px 20px; text-align: center; margin-bottom: 20px; }
+        .menu-btn { background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; display: flex; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.03); cursor: pointer; text-decoration: none; color: #333; }
+        .menu-btn i { width: 30px; font-size: 1.2rem; color: #0984e3; }
     </style>
 </head>
 <body>
 
     <div id="loading">
-        <div class="loading-card">
-            <div class="icon-bounce"><i class="fa-solid fa-house-chimney"></i></div>
-            <div class="fw-bold text-secondary">系統同步中...</div>
+        <div class="loading-icon-box">
+            <i class="fa-solid fa-house-chimney fa-2x text-primary"></i>
+        </div>
+        <div class="d-flex align-items-center gap-2 text-primary mb-2">
+            <span class="spinner-border spinner-border-sm" role="status"></span>
+            <span class="fw-bold">租屋小幫手</span>
+        </div>
+        <p class="loading-text">正在同步帳單資料...</p>
+    </div>
+
+    <div id="view-bind" class="container pt-5" style="display:none;">
+        <div class="card border-0 shadow-lg p-4 text-center mt-5" style="border-radius: 20px;">
+            <div class="mb-3">
+                <i class="fa-solid fa-house-chimney-user fa-3x text-primary"></i>
+            </div>
+            <h4>歡迎使用租屋小幫手</h4>
+            <p class="text-muted">請輸入身分證字號進行身份驗證</p>
+            <input type="text" id="input-nid" class="form-control form-control-lg mb-3 text-center bg-light border-0" placeholder="A123456789" style="text-transform:uppercase;">
+            <button onclick="doBind()" class="btn btn-primary btn-lg w-100 rounded-pill shadow-sm" id="btn-bind">開始綁定</button>
         </div>
     </div>
 
-    <div id="view-admin" style="display:none;">
-        <div class="admin-header d-flex justify-content-between align-items-center">
-            <div>
-                <h4 class="mb-0 fw-bold">房東管理台</h4>
-                <small class="opacity-75">總覽所有房客狀況</small>
-            </div>
-            <button onclick="triggerAutoBill()" class="btn btn-sm btn-outline-light">
-                <i class="fa-solid fa-robot me-1"></i>手動出帳
-            </button>
-        </div>
-        
-        <div class="container" id="admin-list">
-            </div>
-    </div>
+    <div id="app-main" style="display:none;">
 
-    <div id="view-tenant" style="display:none;">
-        <div id="view-bind" class="container pt-5" style="display:none;">
-            <div class="card border-0 shadow-lg p-4 text-center mt-5" style="border-radius: 20px;">
-                <div class="mb-3"><i class="fa-solid fa-house-chimney-user fa-3x text-primary"></i></div>
-                <h4>歡迎使用租屋小幫手</h4>
-                <p class="text-muted">請輸入身分證字號進行身份驗證</p>
-                <input type="text" id="input-nid" class="form-control form-control-lg mb-3 text-center bg-light border-0" placeholder="A123456789" style="text-transform:uppercase;">
-                <button onclick="doBind()" class="btn btn-primary btn-lg w-100 rounded-pill shadow-sm" id="btn-bind">開始綁定</button>
+        <div id="tab-home" class="container pt-3">
+            <h5 class="mb-3 ps-1 fw-bold text-secondary">待處理房租</h5>
+            <div id="current-bills-container"></div>
+            <div id="home-empty" class="text-center mt-5 text-muted" style="display:none;">
+                <i class="fa-regular fa-circle-check fa-3x mb-3 text-success"></i>
+                <p>太棒了！目前沒有欠費</p>
             </div>
         </div>
 
-        <div id="app-main" style="display:none;" class="container pt-3">
-            <h5 class="mb-3 ps-1 fw-bold text-secondary">我的帳單</h5>
-            <div id="bills-container"></div>
-            <div id="empty-msg" class="text-center mt-5 text-muted" style="display:none;">
-                <i class="fa-regular fa-face-smile fa-3x mb-3"></i><p>目前無待繳帳單</p>
+        <div id="tab-history" class="container pt-3" style="display:none;">
+            <h5 class="mb-3 ps-1 fw-bold text-secondary">歷史房租紀錄</h5>
+            <div id="history-container"></div>
+            <div id="history-empty" class="text-center mt-5 text-muted" style="display:none;">
+                <p>尚無歷史紀錄</p>
             </div>
-            <div class="text-center mt-4"><button onclick="location.reload()" class="btn btn-sm btn-light rounded-pill">重新整理</button></div>
+        </div>
+
+        <div id="tab-profile" style="display:none;">
+            <div class="profile-header">
+                <i class="fa-solid fa-user-circle fa-4x mb-2"></i>
+                <h3 id="profile-name" class="fw-bold">租客</h3>
+                <p class="mb-0 opacity-75"><i class="fa-solid fa-location-dot me-1"></i><span id="profile-community">社區名稱</span></p>
+            </div>
+            
+            <div class="container">
+                <div class="menu-btn" onclick="alert('請直接在 LINE 上留言給房東即可！')">
+                    <i class="fa-solid fa-comments"></i>
+                    <span class="flex-grow-1">聯絡房東</span>
+                    <i class="fa-solid fa-chevron-right text-muted" style="font-size: 0.8rem;"></i>
+                </div>
+                
+                <div class="menu-btn" onclick="alert('報修功能開發中，請先拍照傳給房東。')">
+                    <i class="fa-solid fa-screwdriver-wrench"></i>
+                    <span class="flex-grow-1">房屋報修</span>
+                    <i class="fa-solid fa-chevron-right text-muted" style="font-size: 0.8rem;"></i>
+                </div>
+
+                <div class="menu-btn" onclick="location.reload()">
+                    <i class="fa-solid fa-rotate"></i>
+                    <span class="flex-grow-1">重新整理資料</span>
+                </div>
+                
+                <div class="text-center mt-4 text-muted small">
+                    <p>租屋小幫手 v3.2<br>ID: <span id="profile-nid">--</span></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bottom-nav">
+            <div class="nav-item active" onclick="switchTab('home', this)">
+                <i class="fa-solid fa-receipt"></i>
+                <span>帳單</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('history', this)">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                <span>紀錄</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('profile', this)">
+                <i class="fa-solid fa-user"></i>
+                <span>我的</span>
+            </div>
         </div>
     </div>
 
 <script>
-    // ⚠️ 設定區
+    // ⚠️ 設定區：請務必確認你的 LIFF ID 與 API URL
     const LIFF_ID = "2008820485-VKMYnG7d"; 
     const API_URL = "https://script.google.com/macros/s/AKfycbwRfFmfqVKSHMSHpGaqPFy9x8PLkFSf7cYuoyiFFtKFNA8ojXGtnkRUDWmMsft_MlP_/exec";
-    
+
     let currentUser = null;
+    let currentCommunityId = null; 
 
     window.onload = function() {
-        if (typeof liff === 'undefined') { alert("SDK Error"); return; }
+        if (typeof liff === 'undefined') {
+            alert("LIFF SDK 載入失敗");
+            document.getElementById("loading").style.display = "none";
+            return;
+        }
+
         liff.init({ liffId: LIFF_ID }).then(() => {
             if (!liff.isLoggedIn()) {
                 liff.login({ redirectUri: window.location.href });
             } else {
                 currentUser = liff.getDecodedIDToken().sub;
-                
-                // 改為呼叫後端 API 來判斷身分
-                fetchUserStatus();
+                fetchStatus();
             }
-        }).catch(err => alert("Init Error: " + err));
+        }).catch(err => {
+            alert("LIFF 初始化錯誤: " + err);
+        });
     };
 
-    // 統一的身分驗證函式
-    function fetchUserStatus() {
+    function switchTab(tabName, navEl) {
+        document.getElementById('tab-home').style.display = 'none';
+        document.getElementById('tab-history').style.display = 'none';
+        document.getElementById('tab-profile').style.display = 'none';
+        document.getElementById('tab-' + tabName).style.display = 'block';
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        navEl.classList.add('active');
+    }
+
+    function fetchStatus() {
         fetch(API_URL, {
             method: "POST",
             body: JSON.stringify({ action: "getStatus", userId: currentUser })
         })
         .then(r => r.json())
         .then(res => {
+            // 資料載入完成，隱藏 Loading 畫面
             document.getElementById("loading").style.display = "none";
 
-            // ★ 判斷是否為管理員
-            if (res.isAdmin) {
-                initLandlordView(); // 進入房東後台
-            } 
-            // 判斷是否為已綁定租客
-            else if (res.registered) {
-                document.getElementById("view-tenant").style.display = "block";
-                document.getElementById("app-main").style.display = "block"; // 顯示租客主畫面
+            if (!res.registered) {
+                document.getElementById("view-bind").style.display = "block";
+            } else {
+                document.getElementById("app-main").style.display = "block";
                 
-                // 顯示租客資料
                 currentCommunityId = res.tenant.community_id;
                 document.getElementById("profile-name").innerText = res.tenant.name;
                 document.getElementById("profile-community").innerText = res.tenant.community_id;
                 document.getElementById("profile-nid").innerText = res.tenant.national_id;
 
-                if (res.bills && res.bills.length > 0) renderBills(res.bills);
-                else document.getElementById("empty-msg").style.display = "block";
-            } 
-            // 未綁定
-            else {
-                document.getElementById("view-tenant").style.display = "block";
-                document.getElementById("view-bind").style.display = "block";
+                if (res.bills) {
+                    separateAndRenderBills(res.bills);
+                }
             }
         })
         .catch(err => {
@@ -134,148 +233,111 @@
         });
     }
 
-    // --- 房東邏輯 ---
-    function initLandlordView() {
-        document.getElementById("view-admin").style.display = "block";
-        document.getElementById("loading").style.display = "none"; // 房東不用等太久，直接先顯示外框
-        
-        fetch(API_URL, {
-            method: "POST",
-            body: JSON.stringify({ action: "getLandlordData" })
-        })
-        .then(r => r.json())
-        .then(res => {
-            const container = document.getElementById("admin-list");
-            container.innerHTML = "";
-            
-            res.data.forEach(item => {
-                const bill = item.bill;
-                let statusBadge = `<span class="badge bg-secondary">無資料</span>`;
-                let actionBtn = "";
+    function separateAndRenderBills(bills) {
+        const homeContainer = document.getElementById("current-bills-container");
+        const historyContainer = document.getElementById("history-container");
+        homeContainer.innerHTML = "";
+        historyContainer.innerHTML = "";
 
-                if (bill.status === "待繳費") {
-                    statusBadge = `<span class="badge bg-danger">未繳費 $${bill.total}</span>`;
-                } else if (bill.status === "待查核") {
-                    statusBadge = `<span class="badge bg-warning text-dark">待查核 $${bill.total}</span>`;
-                    // 顯示驗收按鈕
-                    actionBtn = `
-                    <button onclick="verifyPayment('${item.tenant.community_id}', '${bill.bill_id}')" class="btn btn-sm btn-primary w-100 mt-2">
-                        <i class="fa-solid fa-check me-1"></i>確認收款
-                    </button>`;
-                } else if (bill.status === "已完成") {
-                    statusBadge = `<span class="badge bg-success">已完成</span>`;
-                }
+        let hasCurrent = false;
+        let hasHistory = false;
 
+        bills.forEach(bill => {
+            if (bill.status === "已完成") {
+                hasHistory = true;
                 const html = `
-                <div class="bill-card admin-card p-3">
-                    <div class="d-flex justify-content-between align-items-center">
+                    <div class="history-item">
                         <div>
-                            <h5 class="fw-bold mb-1">${item.tenant.community_id} <small class="text-muted fs-6">${item.tenant.name}</small></h5>
-                            <div class="small text-muted">最新帳單: ${bill.month}</div>
+                            <h6 class="mb-0 fw-bold text-secondary">${bill.month} 帳單</h6>
+                            <small class="text-muted">總額 $${formatMoney(bill.total)}</small>
                         </div>
-                        <div class="text-end">${statusBadge}</div>
-                    </div>
-                    ${actionBtn}
-                </div>`;
-                container.innerHTML += html;
-            });
-        });
-    }
-
-    function verifyPayment(communityId, billId) {
-        if(!confirm("確認已收到款項？")) return;
-        fetch(API_URL, {
-            method: "POST",
-            body: JSON.stringify({ action: "verify", communityId, billId })
-        }).then(r=>r.json()).then(res => {
-            alert(res.message);
-            initLandlordView(); // 刷新列表
-        });
-    }
-
-    function triggerAutoBill() {
-        if(!confirm("確定要執行「本月自動開單」嗎？\n(只會針對尚未開單的房客新增基礎帳單)")) return;
-        fetch(API_URL, {
-            method: "POST",
-            body: JSON.stringify({ action: "triggerAutoBill" })
-        }).then(r=>r.json()).then(res => {
-            alert(res.message);
-            initLandlordView();
-        });
-    }
-
-    // --- 房客邏輯 (與之前相同，簡化顯示) ---
-    function initTenantView() {
-        fetch(API_URL, {
-            method: "POST",
-            body: JSON.stringify({ action: "getStatus", userId: currentUser })
-        })
-        .then(r => r.json())
-        .then(res => {
-            document.getElementById("loading").style.display = "none";
-            if (!res.registered) {
-                document.getElementById("view-bind").style.display = "block";
+                        <span class="badge bg-success rounded-pill">已繳費</span>
+                    </div>`;
+                historyContainer.innerHTML += html;
             } else {
-                document.getElementById("app-main").style.display = "block";
-                if (res.bills && res.bills.length > 0) renderBills(res.bills);
-                else document.getElementById("empty-msg").style.display = "block";
+                hasCurrent = true;
+                renderHomeCard(bill, homeContainer);
             }
         });
+
+        if (!hasCurrent) document.getElementById("home-empty").style.display = "block";
+        if (!hasHistory) document.getElementById("history-empty").style.display = "block";
     }
 
-    function renderBills(bills) {
-        const container = document.getElementById("bills-container");
-        container.innerHTML = "";
-        bills.forEach(bill => {
-            // 房客渲染邏輯 (簡化版，只顯示核心資訊)
-            let color = bill.status==="待繳費"?"bg-red": (bill.status==="待查核"?"bg-yellow":"bg-green");
-            let btn = bill.status==="待繳費" ? `<hr><button onclick="doPay('${bill.bill_id}', '${bill.community_id}')" class="btn btn-danger w-100 rounded-pill">繳費回報</button>` : ""; // 注意這裡我補上了 community_id 傳遞
-            // ... (為節省篇幅，你可以套用上一版漂亮的 CSS HTML) ...
-            // 這裡用最簡單的卡片示意：
-            container.innerHTML += `
+    function renderHomeCard(bill, container) {
+        let colorClass = bill.status === "待繳費" ? "bg-red" : "bg-yellow";
+        let statusText = bill.status === "待繳費" ? "待繳費" : "審核中";
+        let btnHtml = "";
+
+        if (bill.status === "待繳費") {
+            btnHtml = `
+                <hr>
+                <button onclick="doPay('${bill.bill_id}')" class="btn btn-danger w-100 shadow-sm rounded-pill">
+                    <i class="fa-solid fa-coins me-2"></i>立即繳費 $${formatMoney(bill.total)}
+                </button>`;
+        } else {
+            btnHtml = `<div class="text-center mt-3 text-warning"><i class="fa-solid fa-spinner fa-spin me-1"></i> 房東確認中</div>`;
+        }
+
+        const waterDisplay = Number(bill.water_amt) > 0 ? `$${formatMoney(bill.water_amt)}` : "-";
+        const elecDisplay = Number(bill.elec_amt) > 0 ? `$${formatMoney(bill.elec_amt)}` : "-";
+
+        const html = `
             <div class="bill-card">
-                <div class="bill-header ${color} text-white">
-                    <span class="fw-bold">${bill.month}</span>
-                    <span>${bill.status}</span>
+                <div class="bill-header ${colorClass}">
+                    <h5 class="mb-0 fw-bold"><i class="fa-regular fa-calendar-check me-2"></i>${bill.month}</h5>
+                    <span class="badge bg-white text-dark rounded-pill">${statusText}</span>
                 </div>
                 <div class="bill-body">
-                    <div class="d-flex justify-content-between"><span>總金額</span><span class="fw-bold text-danger">$${bill.total}</span></div>
-                    ${btn}
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-secondary"><i class="fa-solid fa-house me-2"></i>房租</span>
+                        <span class="fw-bold">$${formatMoney(bill.rent)}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-secondary"><i class="fa-solid fa-faucet me-2"></i>水費 <small class="text-muted">(${bill.water_usage}度)</small></span>
+                        <span class="fw-bold">${waterDisplay}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-secondary"><i class="fa-solid fa-bolt me-2"></i>電費 <small class="text-muted">(${bill.elec_usage}度)</small></span>
+                        <span class="fw-bold">${elecDisplay}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mt-3 pt-2 border-top">
+                        <span class="fw-bold text-dark">總金額</span>
+                        <span class="fs-4 fw-bold text-red">$${formatMoney(bill.total)}</span>
+                    </div>
+                    ${btnHtml}
                 </div>
             </div>`;
-        });
+        
+        container.innerHTML += html;
     }
 
     function doBind() {
         const nid = document.getElementById("input-nid").value;
         if(!nid) return alert("請輸入身分證");
+        document.getElementById("btn-bind").innerText = "處理中...";
         fetch(API_URL, {
             method: "POST",
             body: JSON.stringify({ action: "bind", userId: currentUser, nationalId: nid })
         }).then(r=>r.json()).then(res => {
-            if(res.success) { alert("成功"); location.reload(); }
-            else alert(res.message);
+            if(res.success) { alert("綁定成功！"); location.reload(); }
+            else { alert(res.message); document.getElementById("btn-bind").innerText = "開始綁定"; }
         });
     }
-    
-    // 注意：這裡需要 currentCommunityId，因為房客視圖在 renderBills 時要取得 communityId
-    // 為了簡化，上面的 API getStatusV3 回傳的 tenants 物件裡有 community_id
-    // 你可以在 renderBills 時把 communityId 塞進 button onclick
-    function doPay(billId, communityId) {
-        // 從 renderBills 傳入 communityId 比較穩
-        if(!communityId) {
-             // 如果沒有傳入，嘗試從全域變數獲取 (如果你有存的話)
-             // 這裡建議修改 renderBills 裡的按鈕： onclick="doPay('${bill.bill_id}', '你的社區ID')"
-             // 由於 getTenantStatusV3 回傳的 tenant 物件有 community_id，我們可以存在全域
-             alert("系統錯誤: 遺失社區ID"); return;
-        }
-        if(!confirm("確認匯款？")) return;
+
+    function doPay(billId) {
+        if(!confirm("確認已完成匯款？")) return;
         fetch(API_URL, {
             method: "POST",
-            body: JSON.stringify({ action: "pay", userId: currentUser, billId, communityId })
+            body: JSON.stringify({ action: "pay", userId: currentUser, billId: billId, communityId: currentCommunityId })
         }).then(r=>r.json()).then(res => {
-            alert("已通知房東"); location.reload();
+            if(res.success) { alert("已通知房東！"); location.reload(); }
+            else { alert("錯誤：" + res.message); }
         });
+    }
+
+    function formatMoney(num) {
+        return Number(num).toLocaleString();
     }
 </script>
 </body>
