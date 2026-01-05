@@ -43,20 +43,36 @@ function fetchStatus() {
 }
 
 function doBind() {
-    const nid = document.getElementById("input-nid").value;
-    if(!nid) return alert("請輸入身分證");
-    
+    const nid = document.getElementById("input-nid").value.trim();
+
+    // 驗證輸入
+    if(!nid) {
+        showToast("請輸入身分證字號", "warning");
+        return;
+    }
+
+    // 簡單格式驗證（第一碼英文 + 9碼數字）
+    const idPattern = /^[A-Z][0-9]{9}$/i;
+    if(!idPattern.test(nid)) {
+        showToast("身分證格式不正確（例：A123456789）", "error");
+        return;
+    }
+
     const btn = document.getElementById("btn-bind");
-    btn.innerText = "處理中...";
-    btn.disabled = true;
+    setButtonLoading(btn, true);
 
     ApiService.bindUser(currentUser, nid)
     .then(res => {
-        if(res.success) { alert("綁定成功！"); location.reload(); }
-        else { 
-            alert(res.message); 
-            btn.innerText = "驗證綁定"; 
-            btn.disabled = false;
+        if(res.success) {
+            showToast("綁定成功！正在載入...", "success");
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast(res.message, "error");
+            setButtonLoading(btn, false);
         }
+    })
+    .catch(err => {
+        showToast("連線錯誤，請稍後再試", "error");
+        setButtonLoading(btn, false);
     });
 }

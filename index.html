@@ -28,7 +28,12 @@
             <h3 class="fw-bold mb-2">歡迎使用</h3>
             <p class="text-muted mb-4">請輸入身分證字號進行身份驗證</p>
             <input type="text" id="input-nid" class="form-control form-control-lg mb-4 text-center bg-light border-0 py-3" placeholder="A123456789" style="text-transform:uppercase; letter-spacing: 2px; font-weight: bold;">
-            <button id="btn-bind" onclick="doBind()" class="btn btn-primary btn-action btn-lg">驗證綁定</button>
+            <button id="btn-bind" onclick="doBind()" class="btn btn-primary btn-action btn-lg">
+                <span class="btn-text">驗證綁定</span>
+                <span class="btn-spinner" style="display:none;">
+                    <i class="fa-solid fa-spinner fa-spin"></i> 處理中
+                </span>
+            </button>
         </div>
     </div>
 
@@ -130,6 +135,9 @@
             <div class="nav-item" onclick="switchTab('profile', this)"><i class="fa-solid fa-user"></i><span>我的</span></div>
         </div>
     </div>
+
+    <!-- Toast 容器 -->
+    <div id="toast-container" class="toast-container"></div>
 
     <script src="js/config.js"></script>
     <script src="js/utils.js"></script>

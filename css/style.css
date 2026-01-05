@@ -1,3 +1,42 @@
+/* --- CSS 變數系統 --- */
+:root {
+    /* 主色系 */
+    --primary: #0984e3;
+    --primary-light: #74b9ff;
+    --primary-dark: #0652a8;
+
+    /* 語意色 */
+    --success: #00b894;
+    --warning: #fdcb6e;
+    --danger: #d63031;
+    --info: #0984e3;
+
+    /* 中性色 */
+    --gray-50: #f8f9fa;
+    --gray-100: #f1f3f5;
+    --gray-200: #e9ecef;
+    --gray-300: #dee2e6;
+    --gray-400: #ced4da;
+    --gray-500: #adb5bd;
+    --gray-600: #868e96;
+    --gray-700: #495057;
+    --gray-800: #343a40;
+    --gray-900: #212529;
+
+    /* 陰影 */
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 15px rgba(0,0,0,0.08);
+    --shadow-lg: 0 10px 40px rgba(0,0,0,0.12);
+    --shadow-xl: 0 20px 60px rgba(0,0,0,0.15);
+
+    /* 圓角 */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 20px;
+    --radius-xl: 24px;
+    --radius-full: 9999px;
+}
+
 /* --- 全域設定 --- */
 body { background-color: #f4f7f6; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; padding-bottom: 90px; -webkit-font-smoothing: antialiased; }
 
@@ -41,6 +80,278 @@ body { background-color: #f4f7f6; font-family: -apple-system, BlinkMacSystemFont
 @keyframes dotFade { 0%, 80%, 100% {transform: scale(0);} 40% {transform: scale(1);} }
 @keyframes slideUp { from {opacity: 0; transform: translateY(20px);} to {opacity: 1; transform: translateY(0);} }
 @keyframes slideInRight { from {transform:translateX(100%);} to {transform:translateX(0);} }
-.btn-action { width: 100%; padding: 12px; border-radius: 50px; font-weight: bold; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+.btn-action { width: 100%; padding: 12px; border-radius: 50px; font-weight: bold; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.1); position: relative; }
 .row-kv { display: flex; justify-content: space-between; margin-bottom: 8px; color: #555; }
 .text-big-amt { font-size: 1.5rem; font-weight: 800; }
+
+/* ===== Toast 通知系統 ===== */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+}
+
+.toast {
+    background: white;
+    padding: 14px 20px;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 280px;
+    max-width: 350px;
+    border-left: 4px solid;
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    pointer-events: auto;
+}
+
+.toast-success { border-left-color: var(--success); }
+.toast-success .toast-icon { color: var(--success); }
+
+.toast-error { border-left-color: var(--danger); }
+.toast-error .toast-icon { color: var(--danger); }
+
+.toast-warning { border-left-color: var(--warning); }
+.toast-warning .toast-icon { color: var(--warning); }
+
+.toast-info { border-left-color: var(--info); }
+.toast-info .toast-icon { color: var(--info); }
+
+.toast-icon {
+    font-size: 1.3rem;
+    flex-shrink: 0;
+}
+
+.toast-message {
+    color: var(--gray-800);
+    font-weight: 500;
+    line-height: 1.4;
+    flex: 1;
+}
+
+.toast-enter {
+    transform: translateX(400px);
+    opacity: 0;
+}
+
+.toast-exit {
+    transform: translateX(400px);
+    opacity: 0;
+}
+
+/* ===== 自訂確認對話框 ===== */
+.custom-modal {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.custom-modal.show {
+    opacity: 1;
+}
+
+.modal-backdrop {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: 0;
+    width: 90%;
+    max-width: 400px;
+    position: relative;
+    box-shadow: var(--shadow-xl);
+    transform: scale(0.9);
+    transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.custom-modal.show .modal-content {
+    transform: scale(1);
+}
+
+.modal-header {
+    padding: 24px 24px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--primary);
+}
+
+.modal-header i {
+    font-size: 1.5rem;
+}
+
+.modal-header h5 {
+    margin: 0;
+    font-weight: 700;
+    color: var(--gray-900);
+}
+
+.modal-body {
+    padding: 0 24px 24px;
+    color: var(--gray-700);
+    line-height: 1.6;
+}
+
+.modal-footer {
+    padding: 16px 24px 24px;
+    display: flex;
+    gap: 12px;
+}
+
+.modal-footer .btn {
+    flex: 1;
+    padding: 12px;
+    border-radius: var(--radius-md);
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-cancel {
+    background: var(--gray-100);
+    color: var(--gray-700);
+}
+
+.btn-cancel:active {
+    background: var(--gray-200);
+}
+
+.btn-confirm {
+    background: linear-gradient(135deg, var(--primary-light), var(--primary));
+    color: white;
+    box-shadow: 0 4px 12px rgba(9, 132, 227, 0.3);
+}
+
+.btn-confirm:active {
+    transform: scale(0.98);
+}
+
+.btn-confirm-danger {
+    background: linear-gradient(135deg, #ff7675, var(--danger));
+    color: white;
+    box-shadow: 0 4px 12px rgba(214, 48, 49, 0.3);
+}
+
+/* ===== 按鈕 Loading 狀態 ===== */
+.btn-loading {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.btn-spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: none;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ===== Loading 疊加層 ===== */
+.loading-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(6px);
+    z-index: 10001;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.loading-overlay.show {
+    opacity: 1;
+}
+
+.loading-content {
+    background: white;
+    padding: 40px;
+    border-radius: var(--radius-xl);
+    text-align: center;
+    box-shadow: var(--shadow-xl);
+    min-width: 200px;
+}
+
+.loading-spinner {
+    font-size: 3rem;
+    color: var(--primary);
+    margin-bottom: 20px;
+    animation: bounce 2s infinite;
+}
+
+.loading-spinner.success {
+    color: var(--success);
+    animation: scaleIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.loading-text {
+    color: var(--gray-700);
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+@keyframes scaleIn {
+    0% { transform: scale(0); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+/* ===== 帳單卡片增強 ===== */
+.bill-card {
+    border-left: 4px solid transparent;
+}
+
+.bill-card[data-status="待繳費"] {
+    border-left-color: var(--danger);
+}
+
+.bill-card[data-status="待查核"] {
+    border-left-color: var(--warning);
+}
+
+.bill-card[data-status="已完成"] {
+    border-left-color: var(--success);
+    opacity: 0.8;
+}
+
+.bill-card.processing {
+    opacity: 0.6;
+    pointer-events: none;
+    position: relative;
+}
+
+.bill-card.processing::after {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(9, 132, 227, 0.1);
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}

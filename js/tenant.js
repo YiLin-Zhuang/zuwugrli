@@ -51,13 +51,18 @@ function renderTenantHomeCard(bill, container) {
     let btnHtml = "";
 
     if (bill.status === "待繳費") {
-        btnHtml = `<hr class="opacity-10"><button onclick="doPay('${bill.bill_id}')" class="btn btn-action btn-danger text-white bg-gradient-red"><i class="fa-solid fa-coins me-2"></i>已匯款</button>`;
+        btnHtml = `<hr class="opacity-10"><button onclick="doPay('${bill.bill_id}')" class="btn btn-action btn-danger text-white bg-gradient-red position-relative">
+            <span class="btn-text"><i class="fa-solid fa-coins me-2"></i>已匯款</span>
+            <span class="btn-spinner" style="display:none;">
+                <i class="fa-solid fa-spinner fa-spin"></i> 通知中
+            </span>
+        </button>`;
     } else {
         btnHtml = `<div class="text-center mt-3 text-warning"><i class="fa-solid fa-spinner fa-spin me-1"></i> 房東確認中</div>`;
     }
 
     const html = `
-        <div class="bill-card">
+        <div class="bill-card" data-status="${bill.status}" data-bill-id="${bill.bill_id}">
             <div class="bill-header ${headerClass} text-white">
                 <span><i class="fa-regular fa-calendar-check me-2"></i>${bill.month}</span>
                 <span class="badge bg-white text-dark bg-opacity-75 rounded-pill">${bill.status}</span>
@@ -77,12 +82,41 @@ function renderTenantHomeCard(bill, container) {
 }
 
 function doPay(billId) {
-    if(!confirm("確認已完成匯款？")) return;
-    if(!currentCommunityId) { alert("系統錯誤：無法識別社區"); return; }
-    
-    ApiService.payBill(currentUser, billId, currentCommunityId)
-    .then(res => {
-        if(res.success) { alert("已通知房東！"); location.reload(); }
-        else { alert("錯誤：" + res.message); }
+    if(!currentCommunityId) {
+        showToast("系統錯誤：無法識別社區", "error");
+        return;
+    }
+
+    // 使用自訂確認對話框
+    showConfirmModal({
+        title: '確認匯款',
+        message: '您確定已經完成匯款了嗎？<br>通知後房東會收到提醒進行確認。',
+        confirmText: '確認已匯款',
+        confirmClass: 'btn-confirm',
+        onConfirm: () => {
+            // 顯示 loading 疊加層
+            showLoadingOverlay('通知房東中...');
+
+            ApiService.payBill(currentUser, billId, currentCommunityId)
+            .then(res => {
+                if(res.success) {
+                    // 顯示成功動畫
+                    updateLoadingOverlay('通知成功！', true);
+
+                    // 1 秒後重新載入
+                    setTimeout(() => {
+                        hideLoadingOverlay();
+                        location.reload();
+                    }, 1500);
+                } else {
+                    hideLoadingOverlay();
+                    showToast(res.message || '操作失敗', 'error');
+                }
+            })
+            .catch(err => {
+                hideLoadingOverlay();
+                showToast('連線錯誤，請稍後再試', 'error');
+            });
+        }
     });
 }

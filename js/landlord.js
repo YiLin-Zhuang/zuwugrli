@@ -9,8 +9,12 @@ function initLandlordView() {
 }
 
 function renderDashboard(list, stats) {
-    document.getElementById("stat-collected").innerText = "$" + formatMoney(stats.collected);
-    document.getElementById("stat-pending").innerText = "$" + formatMoney(stats.total_rent - stats.collected);
+    // 使用數字滾動動畫
+    const collectedEl = document.getElementById("stat-collected");
+    const pendingEl = document.getElementById("stat-pending");
+
+    animateNumber(collectedEl, 0, stats.collected);
+    animateNumber(pendingEl, 0, stats.total_rent - stats.collected);
     
     const container = document.getElementById("admin-todo-list");
     container.innerHTML = "";
@@ -20,7 +24,7 @@ function renderDashboard(list, stats) {
         if (item.bill.status === "待查核") {
             hasTodo = true;
             const html = `
-            <div class="bill-card p-3 border-start border-4 border-warning">
+            <div class="bill-card p-3 border-start border-4 border-warning" data-bill-id="${item.bill.bill_id}" data-community-id="${item.tenant.community_id}">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <div>
                         <h6 class="fw-bold mb-0">${item.tenant.community_id} <span class="small text-muted">(${item.tenant.name})</span></h6>
@@ -30,7 +34,7 @@ function renderDashboard(list, stats) {
                 </div>
                 <div class="d-flex justify-content-between align-items-center">
                     <span class="fw-bold text-dark fs-5">$${formatMoney(item.bill.total)}</span>
-                    <button onclick="verifyPayment('${item.tenant.community_id}', '${item.bill.bill_id}')" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm">
+                    <button onclick="verifyPayment('${item.tenant.community_id}', '${item.bill.bill_id}')" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm btn-verify">
                         <i class="fa-solid fa-check me-1"></i>確認收款
                     </button>
                 </div>
@@ -78,15 +82,117 @@ function switchAdminTab(tab, el) {
 }
 
 function verifyPayment(cid, bid) {
-    if(!confirm("確認已收到款項？")) return;
-    ApiService.post({ action: "verify", communityId: cid, billId: bid })
-    .then(() => { alert("已收款"); initLandlordView(); });
+    // 使用自訂確認對話框
+    showConfirmModal({
+        title: '確認收款',
+        message: '確認已經收到這筆款項了嗎？<br>確認後將標記為已完成。',
+        confirmText: '確認收款',
+        confirmClass: 'btn-confirm',
+        onConfirm: () => {
+            // 樂觀更新：立即更新 UI
+            const cardElement = document.querySelector(`[data-bill-id="${bid}"]`);
+            if (cardElement) {
+                cardElement.classList.add('processing');
+
+                const btn = cardElement.querySelector('.btn-verify');
+                if (btn) {
+                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>處理中';
+                    btn.disabled = true;
+                }
+            }
+
+            // API 請求
+            ApiService.post({ action: "verify", communityId: cid, billId: bid })
+            .then(res => {
+                if (res.success || !res.message) {
+                    // 成功：卡片滑出動畫
+                    if (cardElement) {
+                        cardElement.style.transform = 'translateX(100%)';
+                        cardElement.style.opacity = '0';
+                        cardElement.style.transition = 'all 0.3s ease-out';
+
+                        setTimeout(() => {
+                            cardElement.remove();
+
+                            // 檢查是否還有待辦事項
+                            const remaining = document.querySelectorAll('#admin-todo-list .bill-card');
+                            if (remaining.length === 0) {
+                                document.getElementById('admin-todo-empty').style.display = 'block';
+                            }
+
+                            showToast('收款確認成功', 'success');
+
+                            // 重新載入統計數據
+                            updateDashboardStats();
+                        }, 300);
+                    }
+                } else {
+                    throw new Error(res.message);
+                }
+            })
+            .catch(err => {
+                // 失敗：還原狀態
+                if (cardElement) {
+                    cardElement.classList.remove('processing');
+                    const btn = cardElement.querySelector('.btn-verify');
+                    if (btn) {
+                        btn.innerHTML = '<i class="fa-solid fa-check me-1"></i>確認收款';
+                        btn.disabled = false;
+                    }
+                }
+                showToast('操作失敗，請重試', 'error');
+            });
+        }
+    });
+}
+
+// 只更新統計數據，不重新載入整個頁面
+function updateDashboardStats() {
+    ApiService.getLandlordData().then(res => {
+        const stats = res.data.stats;
+        animateNumber(document.getElementById("stat-collected"), 0, stats.collected);
+        animateNumber(document.getElementById("stat-pending"), 0, stats.total_rent - stats.collected);
+    });
 }
 
 function triggerAutoBill() {
-    if(!confirm("確定要執行「本月自動開單」嗎？")) return;
-    ApiService.post({ action: "triggerAutoBill" })
-    .then(res => alert(res.message));
+    // 使用自訂確認對話框
+    showConfirmModal({
+        title: '自動出帳',
+        message: '確定要執行本月自動開單嗎？<br>系統將為所有租客產生基礎帳單。',
+        confirmText: '執行開單',
+        confirmClass: 'btn-confirm',
+        onConfirm: () => {
+            // 顯示 loading 疊加層
+            showLoadingOverlay('自動出帳中...');
+
+            ApiService.post({ action: "triggerAutoBill" })
+            .then(res => {
+                if (res.success) {
+                    updateLoadingOverlay('出帳完成！', true);
+
+                    setTimeout(() => {
+                        hideLoadingOverlay();
+
+                        // 顯示詳細結果
+                        if (res.message) {
+                            showToast(res.message, 'success', 5000);
+                        }
+
+                        // 重新載入頁面以顯示新帳單
+                        setTimeout(() => location.reload(), 1000);
+                    }, 1500);
+                } else {
+                    hideLoadingOverlay();
+                    showToast(res.message || '出帳失敗', 'error');
+                }
+            })
+            .catch(() => {
+                hideLoadingOverlay();
+                showToast('連線錯誤，請稍後再試', 'error');
+            });
+        }
+    });
 }
 
 // 租客詳情頁控制
