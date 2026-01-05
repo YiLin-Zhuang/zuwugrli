@@ -132,7 +132,7 @@
             <h3 class="fw-bold mb-2">歡迎使用</h3>
             <p class="text-muted mb-4">請輸入身分證字號進行身份驗證</p>
             <input type="text" id="input-nid" class="form-control form-control-lg mb-4 text-center bg-light border-0 py-3" placeholder="A123456789" style="text-transform:uppercase; letter-spacing: 2px; font-weight: bold;">
-            <button onclick="doBind()" class="btn btn-primary btn-action btn-lg">開始綁定</button>
+            <button id="btn-bind" onclick="doBind()" class="btn btn-primary btn-action btn-lg">驗證綁定</button>
         </div>
     </div>
 
@@ -520,7 +520,7 @@
         let btnHtml = "";
 
         if (bill.status === "待繳費") {
-            btnHtml = `<hr class="opacity-10"><button onclick="doPay('${bill.bill_id}')" class="btn btn-action btn-danger text-white bg-gradient-red"><i class="fa-solid fa-coins me-2"></i>立即繳費 $${formatMoney(bill.total)}</button>`;
+            btnHtml = `<hr class="opacity-10"><button onclick="doPay('${bill.bill_id}')" class="btn btn-action btn-danger text-white bg-gradient-red"><i class="fa-solid fa-coins me-2"></i>已匯款</button>`;
         } else {
             btnHtml = `<div class="text-center mt-3 text-warning"><i class="fa-solid fa-spinner fa-spin me-1"></i> 房東確認中</div>`;
         }
@@ -552,7 +552,7 @@
         fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "bind", userId: currentUser, nationalId: nid }) })
         .then(r=>r.json()).then(res => {
             if(res.success) { alert("綁定成功！"); location.reload(); }
-            else { alert(res.message); document.getElementById("btn-bind").innerText = "開始綁定"; }
+            else { alert(res.message); document.getElementById("btn-bind").innerText = "驗證綁定"; }
         });
     }
 
