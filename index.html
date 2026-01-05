@@ -4,37 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>租屋小幫手</title>
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js" data-cfasync="false"></script>
     
     <style>
+        /* (這裡原本的 CSS 樣式不用動) */
         body { background-color: #f4f7f6; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding-bottom: 80px; }
-        
-        /* 卡片通用樣式 */
         .bill-card { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; border: none; }
         .bill-header { padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
         .bill-body { padding: 20px; }
-        
-        /* 狀態顏色 */
         .bg-red { background: linear-gradient(135deg, #ff7675, #d63031); color: white; }
         .bg-yellow { background: linear-gradient(135deg, #fdcb6e, #e17055); color: white; }
         .bg-green { background: linear-gradient(135deg, #55efc4, #00b894); color: white; }
         .text-red { color: #d63031; }
-        
-        /* 底部導覽列 */
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-around; padding: 10px 0; z-index: 1000; }
         .nav-item { text-align: center; color: #b2bec3; font-size: 0.8rem; cursor: pointer; flex: 1; }
         .nav-item i { font-size: 1.4rem; margin-bottom: 4px; display: block; }
         .nav-item.active { color: #0984e3; font-weight: bold; }
-        
-        /* 歷史紀錄列表樣式 (較緊湊) */
         .history-item { background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid #00b894; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
-
-        /* 個人中心樣式 */
         .profile-header { background: linear-gradient(135deg, #74b9ff, #0984e3); color: white; padding: 30px 20px; border-radius: 0 0 20px 20px; text-align: center; margin-bottom: 20px; }
         .menu-btn { background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; display: flex; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.03); cursor: pointer; text-decoration: none; color: #333; }
         .menu-btn i { width: 30px; font-size: 1.2rem; color: #0984e3; }
-        
         #loading { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; }
     </style>
 </head>
