@@ -1,269 +1,233 @@
 <!DOCTYPE html>
 <html>
-  <head>
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>租屋小幫手</title>
+    <title>我的帳單</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-    
     <style>
-      body { background-color: #f8f9fa; padding: 20px; }
-      .card { margin-bottom: 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-      #loading { text-align: center; margin-top: 50px; }
-      #content { display: none; }
-    </style>
-  </head>
-  <body>
-    
-    <div id="loading">
-      <div class="spinner-border text-primary" role="status"></div>
-      <p class="mt-2">正在讀取資料...</p>
-    </div>
-
-    <div id="content" class="container">
-      
-      <div id="unregistered-view" style="display:none;">
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <h4 class="card-title text-center mb-4">🏠 租客身份綁定</h4>
-            <form id="bind-form" onsubmit="submitBinding(event)">
-              <div class="mb-3">
-                <label class="form-label">手機號碼</label>
-                <input type="tel" class="form-control" id="input-phone" required>
-              </div>
-              <div class="mb-3">
-                <label class="form-label">驗證碼</label>
-                <input type="text" class="form-control" id="input-code" required>
-              </div>
-              <button type="submit" id="btn-bind" class="btn btn-primary w-100">確認綁定</button>
-            </form>
-            <div id="bind-msg" class="mt-3 text-center text-danger"></div>
-          </div>
-        </div>
-      </div>
-
-      <div id="dashboard-view" style="display:none;">
-        <h4 id="welcome-msg">嗨，租客</h4>
-        <div class="card text-white bg-primary">
-          <div class="card-body text-center">
-            <h6 class="card-title">本月待繳總額</h6>
-            <h1 class="display-4 fw-bold">$<span id="total-due">0</span></h1>
-            <p id="bill-status-text">狀況良好</p>
-          </div>
-        </div>
-        <h5 class="mt-4">待處理帳單</h5>
-        <div id="bill-list"></div>
-      </div>
-    </div>
-
-    <div id="admin-view" style="display:none;" class="mt-5 pt-3 border-top">
-        <h5 class="text-secondary">🔧 房東管理區</h5>
-        <div class="card bg-light">
-          <div class="card-body">
-            <h6>快速抄表開單</h6>
-            <form onsubmit="submitBill(event)">
-              <div class="row g-2">
-                <div class="col-4">
-                  <input type="text" class="form-control" id="bill-room" placeholder="房號(201)" required>
-                </div>
-                <div class="col-8">
-                   <input type="month" class="form-control" id="bill-period" required>
-                </div>
-                <div class="col-6">
-                  <input type="number" class="form-control" id="bill-elec" placeholder="本月電度" required>
-                </div>
-                <div class="col-6">
-                  <input type="number" class="form-control" id="bill-water" placeholder="本月水度" required>
-                </div>
-                <div class="col-12 mt-2">
-                  <button type="submit" id="btn-create-bill" class="btn btn-dark w-100">生成帳單</button>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-
-    <script>
-      // ⚠️ 設定區：請填入你的資料
-      const LIFF_ID = '2008820485-VKMYnG7d'; 
-      const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwRfFmfqVKSHMSHpGaqPFy9x8PLkFSf7cYuoyiFFtKFNA8ojXGtnkRUDWmMsft_MlP_/exec'; 
-      // 例如: https://script.google.com/macros/s/xxxxxx/exec
-
-      window.onload = function() {
-        initializeLiff();
-      };
-
-      function initializeLiff() {
-        liff.init({ liffId: LIFF_ID })
-          .then(() => {
-            if (!liff.isLoggedIn()) {
-              // 因為是自架站，redirectUri 要填「你自己網站的網址」
-              liff.login({ redirectUri: window.location.href });
-            } else {
-              const profile = liff.getDecodedIDToken();
-              if(profile) fetchUserData(profile.sub);
-            }
-          })
-          .catch(err => alert('LIFF Init Error: ' + err));
-      }
-
-      // --- 改用 fetch 呼叫 API ---
-
-      // 1. 取得資料 (GET)
-      function fetchUserData(lineUserId) {
-        // 組合 URL 參數
-        const url = `${GAS_API_URL}?action=getStatus&userId=${lineUserId}`;
+        body { background-color: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        .bill-card { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-top: 20px; }
+        .bill-header { padding: 20px; text-align: center; color: white; }
+        .header-red { background: linear-gradient(135deg, #ff6b6b, #ee5253); } /* 待繳費 */
+        .header-yellow { background: linear-gradient(135deg, #feca57, #ff9f43); color: #333; } /* 待查核 */
+        .header-green { background: linear-gradient(135deg, #1dd1a1, #10ac84); } /* 已完成 */
         
-        fetch(url)
-          .then(res => res.json()) // 解析 JSON
-          .then(data => {
-            renderData(data);
-          })
-          .catch(err => {
-            document.getElementById('loading').style.display = 'none';
-            alert("連線錯誤：" + err);
-          });
-      }
+        .bill-table th { color: #888; font-weight: normal; font-size: 0.9rem; }
+        .bill-table td { text-align: right; font-weight: 500; }
+        .total-row td { border-top: 2px solid #eee; font-weight: bold; font-size: 1.2rem; color: #333; padding-top: 15px; }
+        
+        #loading { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 999; display: flex; justify-content: center; align-items: center; flex-direction: column; }
+    </style>
+</head>
+<body>
 
-      // 2. 提交綁定 (POST)
-      function submitBinding(event) {
-        event.preventDefault();
-        const btn = document.getElementById('btn-bind');
-        const msgDiv = document.getElementById('bind-msg');
-        btn.disabled = true;
-        btn.innerText = "處理中...";
+    <div id="loading">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2 text-secondary">資料讀取中...</p>
+    </div>
 
-        const payload = {
-            action: "bind",
-            userId: liff.getDecodedIDToken().sub,
-            phone: document.getElementById('input-phone').value,
-            code: document.getElementById('input-code').value
-        };
+    <div class="container pb-5" id="app" style="display:none;">
+        
+        <div id="view-bind" style="display:none;">
+            <div class="card shadow-sm mt-5">
+                <div class="card-body p-4 text-center">
+                    <h4>👋 歡迎來到租屋管理</h4>
+                    <p class="text-muted mb-4">請輸入手機號碼以連結您的租屋資料</p>
+                    <input type="tel" id="input-phone" class="form-control form-control-lg mb-3 text-center" placeholder="0912345678">
+                    <button onclick="doBind()" class="btn btn-primary btn-lg w-100" id="btn-bind">確認綁定</button>
+                </div>
+            </div>
+        </div>
 
-        // GAS 的 POST 比較特殊，建議用 "no-cors" 或者一般的 POST
-        // 注意：GAS Web App 會回傳 302 Redirect，fetch 會自動跟隨
-        fetch(GAS_API_URL, {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        })
-        .then(res => res.json())
-        .then(result => {
-            if (result.success) {
-                alert("綁定成功！");
-                location.reload(); // 重新整理頁面
+        <div id="view-bill" style="display:none;">
+            <div class="bill-card">
+                <div id="bill-header" class="bill-header header-red">
+                    <h3 id="bill-month" class="mb-0">2026/01 帳單</h3>
+                    <span id="bill-status" class="badge bg-white text-dark mt-2">待繳費</span>
+                </div>
+
+                <div class="p-4">
+                    <table class="table table-borderless bill-table">
+                        <tbody>
+                            <tr>
+                                <th scope="row">🏠 社區房號</th>
+                                <td id="txt-community">幸福A</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">👤 承租人</th>
+                                <td id="txt-name">王小明</td>
+                            </tr>
+                            <tr><td colspan="2"><hr class="my-1"></td></tr>
+                            <tr>
+                                <th scope="row">本月房租</th>
+                                <td id="val-rent">$15,000</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">💧 水費 <small class="text-muted" id="usage-water">(20度)</small></th>
+                                <td id="val-water">$300</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">⚡ 電費 <small class="text-muted" id="usage-elec">(150度)</small></th>
+                                <td id="val-elec">$750</td>
+                            </tr>
+                            <tr class="total-row">
+                                <th scope="row" class="pt-3">應繳總金額</th>
+                                <td class="pt-3 text-danger" id="val-total">$16,050</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="mt-4">
+                        <button id="btn-pay" onclick="doPay()" class="btn btn-danger btn-lg w-100 shadow-sm">
+                            💰 我已轉帳繳費
+                        </button>
+                        <div id="msg-review" class="alert alert-warning text-center mt-3" style="display:none;">
+                            ⏳ 已通知房東，請等待查核。
+                        </div>
+                        <div id="msg-done" class="alert alert-success text-center mt-3" style="display:none;">
+                            ✅ 房東已查收，感謝準時繳款！
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <p class="text-center text-muted mt-3 small">資料更新時間: <span id="txt-updated">--</span></p>
+        </div>
+        
+        <div id="view-empty" style="display:none;" class="text-center mt-5">
+            <div class="alert alert-light">目前沒有待繳帳單 🎉</div>
+        </div>
+
+    </div>
+
+<script>
+    // ⚠️ 填入你的設定
+    const LIFF_ID = "2008820485-VKMYnG7d";
+    const API_URL = "https://script.google.com/macros/s/AKfycbwRfFmfqVKSHMSHpGaqPFy9x8PLkFSf7cYuoyiFFtKFNA8ojXGtnkRUDWmMsft_MlP_/exec"; 
+
+    let currentBillId = null;
+    let currentUser = null;
+
+    window.onload = function() {
+        liff.init({ liffId: LIFF_ID }).then(() => {
+            if (!liff.isLoggedIn()) {
+                liff.login({ redirectUri: window.location.href });
             } else {
-                msgDiv.innerText = result.message;
-                btn.disabled = false;
-                btn.innerText = "確認綁定";
+                currentUser = liff.getDecodedIDToken().sub;
+                fetchStatus();
             }
-        })
-        .catch(err => {
-            msgDiv.innerText = "API 錯誤: " + err;
-            btn.disabled = false;
-            btn.innerText = "確認綁定";
         });
-      }
+    };
 
-      // 渲染畫面 (跟之前一樣)
-// 渲染畫面主函式
-      function renderData(response) {
-        // 1. 隱藏讀取動畫，顯示內容區
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('content').style.display = 'block';
+    function fetchStatus() {
+        fetch(API_URL, {
+            method: "POST",
+            body: JSON.stringify({ action: "getStatus", userId: currentUser })
+        })
+        .then(r => r.json())
+        .then(res => {
+            document.getElementById("loading").style.display = "none";
+            document.getElementById("app").style.display = "block";
 
-        // 2. 判斷是否已綁定
-        if (!response.registered) {
-          // --- 情況 A: 未綁定 ---
-          // 顯示綁定表單，隱藏儀表板
-          document.getElementById('unregistered-view').style.display = 'block';
-          document.getElementById('dashboard-view').style.display = 'none';
-        } else {
-          // --- 情況 B: 已綁定 (正常租客) ---
-          document.getElementById('unregistered-view').style.display = 'none';
-          document.getElementById('dashboard-view').style.display = 'block';
-          
-          // 2.1 填入租客基本資料
-          // response.tenant 是後端回傳的物件
-          const tenantName = response.tenant.name || "租客";
-          const roomName = response.tenant.room_id || "未知房號";
-          document.getElementById('welcome-msg').innerText = `嗨，${tenantName} (${roomName}房)`;
-          document.getElementById('total-due').innerText = response.total_due;
+            if (!res.registered) {
+                document.getElementById("view-bind").style.display = "block";
+            } else {
+                if (res.bill) {
+                    renderBill(res.tenant, res.bill);
+                } else {
+                    document.getElementById("view-empty").style.display = "block";
+                }
+            }
+        });
+    }
 
-          // 2.2 渲染帳單列表
-          const billList = document.getElementById('bill-list');
-          billList.innerHTML = ""; // 先清空舊資料
+    function renderBill(tenant, bill) {
+        document.getElementById("view-bill").style.display = "block";
+        currentBillId = bill.bill_id;
 
-          if (response.bills.length === 0) {
-             // 無帳單時的顯示
-             billList.innerHTML = `
-               <div class="text-center py-4">
-                 <p class="text-muted mb-0">🎉 太棒了，目前沒有待繳帳單！</p>
-               </div>`;
-             document.getElementById('bill-status-text').innerText = "目前繳費狀況良好";
-             // 如果沒有欠款，總金額顯示綠色或預設色
-             document.getElementById('total-due').classList.remove('text-danger');
-          } else {
-             // 有帳單時的顯示
-             document.getElementById('bill-status-text').innerText = "您有未結清的帳單";
-             document.getElementById('total-due').classList.add('text-danger'); // 金額變紅色
+        // 填入文字
+        document.getElementById("txt-community").innerText = tenant.community_id;
+        document.getElementById("txt-name").innerText = tenant.name;
+        document.getElementById("bill-month").innerText = bill.month + " 帳單";
+        
+        document.getElementById("val-rent").innerText = "$" + formatMoney(bill.rent);
+        document.getElementById("val-water").innerText = "$" + formatMoney(bill.water_amt);
+        document.getElementById("usage-water").innerText = `(${bill.water_usage}度)`;
+        document.getElementById("val-elec").innerText = "$" + formatMoney(bill.elec_amt);
+        document.getElementById("usage-elec").innerText = `(${bill.elec_usage}度)`;
+        document.getElementById("val-total").innerText = "$" + formatMoney(bill.total);
 
-             response.bills.forEach(bill => {
-               // 判斷狀態顯示文字與顏色
-               const isUnpaid = bill.status === 'UNPAID';
-               const statusText = isUnpaid ? '未繳費' : '審核中';
-               const statusBadgeClass = isUnpaid ? 'bg-danger' : 'bg-warning text-dark';
-               
-               // 產生每張帳單的 HTML 卡片
-               const item = document.createElement('div');
-               item.className = 'card border-0 shadow-sm mb-3'; // 加一點陰影與邊距
-               item.innerHTML = `
-                 <div class="card-body d-flex justify-content-between align-items-center">
-                   <div>
-                     <h6 class="mb-1 fw-bold">${bill.period} 帳單</h6>
-                     <span class="badge ${statusBadgeClass}">${statusText}</span>
-                   </div>
-                   <div class="text-end">
-                     <h5 class="mb-1 text-danger fw-bold">$${bill.total_amt}</h5>
-                     ${isUnpaid ? `<button class="btn btn-sm btn-outline-primary mt-1" onclick="uploadProof('${bill.bill_id}')">上傳證明</button>` : ''}
-                   </div>
-                 </div>
-               `;
-               billList.appendChild(item);
-             });
-          }
+        // 狀態控制 (🔴待繳費 / 🟡待查核 / 🟢已完成)
+        const header = document.getElementById("bill-header");
+        const statusBadge = document.getElementById("bill-status");
+        const btnPay = document.getElementById("btn-pay");
+        const msgReview = document.getElementById("msg-review");
+        const msgDone = document.getElementById("msg-done");
 
-          // 3. 處理房東管理區 (Admin View)
-          // 邏輯：如果你希望讓特定的人看到後台，可以比對 ID
-          // 目前為了讓你方便測試，我們直接設定「只要綁定成功就顯示」
-          // 或者你可以把 const isAdmin = true 改成 false 來隱藏
-          
-          const currentUserId = liff.getDecodedIDToken().sub;
-          
-          // TODO: 未來建議後端 API 直接回傳 isAdmin: true/false 比較安全
-          // 這裡我們先做一個簡單的「前端測試開關」
-          const isAdmin = true; // ★ 想隱藏後台就把這裡改成 false
+        // 重置樣式
+        header.className = "bill-header";
+        btnPay.style.display = "none";
+        msgReview.style.display = "none";
+        msgDone.style.display = "none";
 
-          if (isAdmin) {
-             const adminView = document.getElementById('admin-view');
-             if(adminView) {
-               adminView.style.display = 'block';
-               
-               // 自動填入「本月」到輸入框，方便操作
-               const now = new Date();
-               // 格式化成 YYYY-MM
-               const monthStr = now.toISOString().slice(0, 7); 
-               document.getElementById('bill-period').value = monthStr;
-             }
-          }
+        if (bill.status === "待繳費") {
+            header.classList.add("header-red");
+            statusBadge.innerText = "待繳費";
+            btnPay.style.display = "block"; // 只有這時候可以按
+        } else if (bill.status === "待查核") {
+            header.classList.add("header-yellow");
+            statusBadge.innerText = "審核中";
+            msgReview.style.display = "block";
+        } else if (bill.status === "已完成") {
+            header.classList.add("header-green");
+            statusBadge.innerText = "已完成";
+            msgDone.style.display = "block";
         }
-      }
+    }
 
-      // [額外補充] 這是上傳證明的預留函式 (避免報錯)
-      function uploadProof(billId) {
-        alert("上傳功能開發中... (Bill ID: " + billId + ")");
-      }
-    </script>
-  </body>
+    function doBind() {
+        const phone = document.getElementById("input-phone").value;
+        if(!phone) return alert("請輸入手機");
+        
+        document.getElementById("btn-bind").innerText = "綁定中...";
+        fetch(API_URL, {
+            method: "POST",
+            body: JSON.stringify({ action: "bind", userId: currentUser, phone: phone })
+        }).then(r=>r.json()).then(res => {
+            if(res.success) {
+                alert("綁定成功！");
+                location.reload();
+            } else {
+                alert(res.message);
+                document.getElementById("btn-bind").innerText = "確認綁定";
+            }
+        });
+    }
+
+    function doPay() {
+        if(!confirm("確定已完成轉帳？")) return;
+        
+        document.getElementById("btn-pay").innerText = "處理中...";
+        document.getElementById("btn-pay").disabled = true;
+
+        fetch(API_URL, {
+            method: "POST",
+            body: JSON.stringify({ action: "pay", userId: currentUser, billId: currentBillId })
+        }).then(r=>r.json()).then(res => {
+            if(res.success) {
+                alert("已通知房東查收！");
+                location.reload(); // 重新整理看狀態變化
+            } else {
+                alert("錯誤：" + res.message);
+            }
+        });
+    }
+
+    function formatMoney(num) {
+        return Number(num).toLocaleString();
+    }
+</script>
+</body>
 </html>
