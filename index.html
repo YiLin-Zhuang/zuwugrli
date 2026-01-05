@@ -166,6 +166,7 @@
     };
 
     // ★ 核心狀態判斷 (加入房東邏輯)
+// ★ 核心狀態判斷 (修正版)
     function fetchStatus() {
         fetch(API_URL, {
             method: "POST",
@@ -179,10 +180,11 @@
             if (res.isAdmin) {
                 initLandlordView(); 
             }
-            // 2. 如果是已綁定租客 -> 顯示原本的 App
+            // 2. 如果是已綁定租客 (★ 關鍵修正：這裡必須檢查 res.tenant 是否存在)
             else if (res.registered && res.tenant) {
                 document.getElementById("app-main").style.display = "block";
                 
+                // 只有確認 res.tenant 存在後，才讀取裡面的資料，避免報錯
                 currentCommunityId = res.tenant.community_id;
                 document.getElementById("profile-name").innerText = res.tenant.name;
                 document.getElementById("profile-community").innerText = res.tenant.community_id;
@@ -192,6 +194,10 @@
             }
             // 3. 未綁定 -> 顯示綁定頁
             else {
+                // 如果是房東但發生錯誤，或是普通未綁定用戶
+                if(res.registered && !res.tenant && !res.isAdmin) {
+                    console.log("異常：顯示已註冊但無資料");
+                }
                 document.getElementById("view-bind").style.display = "block";
             }
         })
